@@ -30,3 +30,6 @@ Thumbs.db
 # Old backup snapshot / scratch notes, not part of the app
 AegFlow.zip
 Bash.txt
+
+# Tenant-specific demo/seed data workbook (already imported to DB, not app code)
+PetroNet_Corp_Dummy_Data.xlsx
