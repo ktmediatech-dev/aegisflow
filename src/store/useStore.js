@@ -73,6 +73,11 @@ export const useStore = create((set, get) => ({
   login: async (email, password) => {
     const res = await api.login(email, password)
     if (!res) throw new Error('Login failed')
+
+    // Platform admin with 2FA enabled: no session yet, just a short-lived
+    // pendingToken the caller must exchange via verify2FALogin() below.
+    if (res.requires2FA) return res
+
     const { token, user } = res
     api.setToken(token)
 
@@ -84,6 +89,16 @@ export const useStore = create((set, get) => ({
       ...user,
       permissions: user.type === 'platform_admin' ? [] : user?.permissions || [],
     }
+    get().setAuth(token, mergedUser)
+    return res
+  },
+
+  verify2FALogin: async (pendingToken, code) => {
+    const res = await api.verifyLogin2FA(pendingToken, code)
+    if (!res) throw new Error('Verification failed')
+    const { token, user } = res
+    api.setToken(token)
+    const mergedUser = { ...user, permissions: [] } // always platform_admin at this point
     get().setAuth(token, mergedUser)
     return res
   },

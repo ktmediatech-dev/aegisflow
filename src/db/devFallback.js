@@ -236,6 +236,47 @@ export async function platformQuery(text, params=[]) {
     return { rows };
   }
 
+  // --- 2FA (platform_admins.totp_*) ---
+  if (q.startsWith('select * from platform_admins where id')) {
+    const admin = platform.platform_admins.find(a => String(a.id) === String(params[0]));
+    return { rows: admin ? [admin] : [] };
+  }
+  if (q.startsWith('select totp_secret, totp_enabled from platform_admins')) {
+    const admin = platform.platform_admins.find(a => String(a.id) === String(params[0]));
+    return { rows: admin ? [{ totp_secret: admin.totp_secret || null, totp_enabled: !!admin.totp_enabled }] : [] };
+  }
+  if (q.startsWith('select totp_secret from platform_admins')) {
+    const admin = platform.platform_admins.find(a => String(a.id) === String(params[0]));
+    return { rows: admin ? [{ totp_secret: admin.totp_secret || null }] : [] };
+  }
+  if (q.startsWith('select totp_enabled from platform_admins')) {
+    const admin = platform.platform_admins.find(a => String(a.id) === String(params[0]));
+    return { rows: admin ? [{ totp_enabled: !!admin.totp_enabled }] : [] };
+  }
+  if (q.startsWith('update platform_admins set totp_secret')) {
+    const [secret, idParam] = params;
+    const admin = platform.platform_admins.find(a => String(a.id) === String(idParam));
+    if (admin) { admin.totp_secret = secret; admin.totp_enabled = false; }
+    return { rows: [] };
+  }
+  if (q.startsWith('update platform_admins set totp_enabled = true')) {
+    const [backupCodes, idParam] = params;
+    const admin = platform.platform_admins.find(a => String(a.id) === String(idParam));
+    if (admin) { admin.totp_enabled = true; admin.totp_backup_codes = JSON.parse(backupCodes); }
+    return { rows: [] };
+  }
+  if (q.startsWith('update platform_admins set totp_enabled = false')) {
+    const admin = platform.platform_admins.find(a => String(a.id) === String(params[0]));
+    if (admin) { admin.totp_enabled = false; admin.totp_secret = null; admin.totp_backup_codes = []; }
+    return { rows: [] };
+  }
+  if (q.startsWith('update platform_admins set totp_backup_codes')) {
+    const [backupCodes, idParam] = params;
+    const admin = platform.platform_admins.find(a => String(a.id) === String(idParam));
+    if (admin) admin.totp_backup_codes = JSON.parse(backupCodes);
+    return { rows: [] };
+  }
+
   // directory lookup used by login
   if (q.includes('from directory') && q.includes('join companies')) {
     const email = params[0];

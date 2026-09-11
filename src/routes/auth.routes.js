@@ -28,6 +28,14 @@ router.post('/login', async (req, res, next) => {
       const ok = await bcrypt.compare(password, admin.password_hash);
       if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
+      // Password alone isn't enough once 2FA is enabled — issue a
+      // short-lived pending token instead of a real one; the client must
+      // exchange it for a real token via POST /auth/2fa/login-verify.
+      if (admin.totp_enabled) {
+        const pendingToken = signToken({ type: 'platform_admin_pending_2fa', adminId: admin.id, email }, { expiresIn: '5m' });
+        return res.json({ requires2FA: true, pendingToken });
+      }
+
       const permissions = MODULE_KEYS.map((module) => ({ module, can_read: true, can_write: true, can_approve: true }));
       const token = signToken({ type: 'platform_admin', adminId: admin.id, email });
       return res.json({ token, user: { name: admin.name, email, type: 'platform_admin', permissions } });

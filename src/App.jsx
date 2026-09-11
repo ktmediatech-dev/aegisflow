@@ -19,6 +19,7 @@ import Users from './pages/Users.jsx'
 import Roles from './pages/Roles.jsx'
 import DeletionRequests from './pages/DeletionRequests.jsx'
 import OrgSettings from './pages/OrgSettings.jsx'
+import Security from './pages/Security.jsx'
 import HR from './pages/HR.jsx'
 import Finance from './pages/Finance.jsx'
 import Procurement from './pages/Procurement.jsx'
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="analytics" element={<ProtectedRoute moduleKey="analytics"><Analytics /></ProtectedRoute>} />
           <Route path="alerts" element={<ProtectedRoute moduleKey="dashboard"><Alerts /></ProtectedRoute>} />
           <Route path="companies" element={<ProtectedRoute platformOnly><Companies /></ProtectedRoute>} />
+          <Route path="security" element={<ProtectedRoute platformOnly><Security /></ProtectedRoute>} />
           <Route path="users" element={<ProtectedRoute moduleKey="admin"><Users /></ProtectedRoute>} />
           <Route path="roles" element={<ProtectedRoute moduleKey="admin"><Roles /></ProtectedRoute>} />
           <Route path="deletion-requests" element={<ProtectedRoute moduleKey="admin"><DeletionRequests /></ProtectedRoute>} />

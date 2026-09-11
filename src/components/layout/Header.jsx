@@ -18,6 +18,8 @@ const PAGE_TITLES = {
   '/import': 'Data Import',
   '/reports': 'Reports',
   '/settings': 'Organization Settings',
+  '/security': 'Security',
+  '/companies': 'Platform Administration',
 }
 
 const THEME_LABELS = { dark: 'Dark', light: 'Light', ocean: 'Ocean', forest: 'Forest', sunset: 'Sunset', slate: 'Slate', violet: 'Violet' }

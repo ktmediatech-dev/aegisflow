@@ -5,10 +5,13 @@ import { useStore } from '../store/useStore.js'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [pendingToken, setPendingToken] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const login = useStore(s => s.login)
+  const verify2FALogin = useStore(s => s.verify2FALogin)
   const fetchCompanyData = useStore(s => s.fetchCompanyData)
 
   useEffect(() => {
@@ -24,11 +27,30 @@ export default function Login() {
     setLoading(true)
     setError(null)
     try {
-      await login(email, password)
+      const res = await login(email, password)
+      if (res?.requires2FA) {
+        setPendingToken(res.pendingToken)
+        return
+      }
       await fetchCompanyData()
       navigate('/')
     } catch (err) {
       setError(err.message || 'Unable to sign in.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const submitCode = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await verify2FALogin(pendingToken, code)
+      await fetchCompanyData()
+      navigate('/')
+    } catch (err) {
+      setError(err.message || 'Verification failed.')
     } finally {
       setLoading(false)
     }
@@ -50,53 +72,93 @@ export default function Login() {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0' }}>Welcome back</div>
-            <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>Sign in with your company credentials to continue.</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0' }}>{pendingToken ? 'Two-factor verification' : 'Welcome back'}</div>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
+              {pendingToken ? 'Enter the 6-digit code from your authenticator app, or a backup code.' : 'Sign in with your company credentials to continue.'}
+            </div>
           </div>
         </div>
 
-        <form onSubmit={submit} style={{ padding: '28px 32px 32px', display: 'grid', gap: 18 }}>
-          {error && (
-            <div style={{ background: 'rgba(248,81,73,0.12)', color: '#f87171', borderRadius: 14, padding: '12px 14px', fontSize: 13 }}>
-              {error}
+        {!pendingToken ? (
+          <form onSubmit={submit} style={{ padding: '28px 32px 32px', display: 'grid', gap: 18 }}>
+            {error && (
+              <div style={{ background: 'rgba(248,81,73,0.12)', color: '#f87171', borderRadius: 14, padding: '12px 14px', fontSize: 13 }}>
+                {error}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-email">Email address</label>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="form-input"
+                placeholder="user@democo.local"
+                required
+              />
             </div>
-          )}
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-email">Email address</label>
-            <input
-              id="login-email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="form-input"
-              placeholder="user@democo.local"
-              required
-            />
-          </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="form-input"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-password">Password</label>
-            <input
-              id="login-password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="form-input"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+            <button className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px', borderRadius: 14 }}>
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
 
-          <button className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px', borderRadius: 14 }}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, color: '#94a3b8', fontSize: 12 }}>
+              <span>Your company will be determined after login.</span>
+              <span style={{ color: '#60a5fa' }}>Demo credentials available</span>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={submitCode} style={{ padding: '28px 32px 32px', display: 'grid', gap: 18 }}>
+            {error && (
+              <div style={{ background: 'rgba(248,81,73,0.12)', color: '#f87171', borderRadius: 14, padding: '12px 14px', fontSize: 13 }}>
+                {error}
+              </div>
+            )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, color: '#94a3b8', fontSize: 12 }}>
-            <span>Your company will be determined after login.</span>
-            <span style={{ color: '#60a5fa' }}>Demo credentials available</span>
-          </div>
-        </form>
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-code">Verification code</label>
+              <input
+                id="login-code"
+                type="text"
+                inputMode="numeric"
+                autoFocus
+                value={code}
+                onChange={e => setCode(e.target.value)}
+                className="form-input"
+                placeholder="123456"
+                required
+              />
+            </div>
+
+            <button className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px 16px', borderRadius: 14 }}>
+              {loading ? 'Verifying…' : 'Verify'}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ width: '100%', justifyContent: 'center' }}
+              onClick={() => { setPendingToken(null); setCode(''); setError(null) }}
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )

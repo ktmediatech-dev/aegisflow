@@ -40,6 +40,11 @@ async function request(path, options = {}) {
 export default {
   setToken,
   login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  verifyLogin2FA: (pendingToken, code) => request('/auth/2fa/login-verify', { method: 'POST', body: JSON.stringify({ pendingToken, code }) }),
+  setup2FA: () => request('/auth/2fa/setup', { method: 'POST' }),
+  verifySetup2FA: (code) => request('/auth/2fa/verify-setup', { method: 'POST', body: JSON.stringify({ code }) }),
+  disable2FA: (code) => request('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
+  get2FAStatus: () => request('/auth/2fa/status'),
   getCurrentUser: () => request('/users/me'),
   getUsers: () => request('/users'),
   createUser: (u) => request('/users', { method: 'POST', body: JSON.stringify(u) }),

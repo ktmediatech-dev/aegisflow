@@ -24,6 +24,7 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import nozzlesRoutes from './routes/nozzles.routes.js';
 import deletionRequestsRoutes from './routes/deletionRequests.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import twoFactorRoutes from './routes/twoFactor.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -35,9 +36,13 @@ app.set('trust proxy', 1);
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
-// Basic brute-force protection on login.
+// Basic brute-force protection on login and 2FA code verification (a
+// 6-digit TOTP code is guessable in ~1M tries — rate limiting is what
+// actually makes that impractical, not the code length alone).
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 app.use('/api/auth/login', loginLimiter);
+const twoFactorLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15 });
+app.use('/api/auth/2fa/login-verify', twoFactorLimiter);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
@@ -49,6 +54,7 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // plus the static-file serving below instead of two separate servers.
 const api = express.Router();
 api.use('/auth', authRoutes);
+api.use('/auth/2fa', twoFactorRoutes);
 api.use('/companies', companiesRoutes);
 api.use('/users', usersRoutes);
 api.use('/roles', rolesRoutes);

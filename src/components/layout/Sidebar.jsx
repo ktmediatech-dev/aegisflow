@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Fuel, Truck, Database, Wrench,
   HardHat, Package, BarChart3, Bell, ShieldAlert,
   Upload, FileText, ChevronLeft, ChevronRight, Zap,
-  Users, ShieldCheck, Briefcase, ClipboardList, Trash2, Settings
+  Users, ShieldCheck, Briefcase, ClipboardList, Trash2, Settings, Lock
 } from 'lucide-react'
 
 const NAV = [
@@ -29,6 +29,7 @@ const NAV = [
   ]},
   { label: 'Platform', items: [
     { path: '/companies', module: 'platform_admin', icon: ShieldCheck, label: 'Companies' },
+    { path: '/security', module: 'platform_admin', icon: Lock, label: 'Security (2FA)' },
   ]},
   { label: 'Finance & Supply', items: [
     { path: '/finance', module: 'finance', icon: FileText, label: 'Finance' },
