@@ -1,13 +1,20 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { platformQuery } from '../db/platformDb.js';
 import { getTenantPool } from '../db/tenantDb.js';
-import { requireAuth, requirePlatformAdmin } from '../middleware/auth.js';
+import { requireAuth, requirePlatformAdmin, requirePlatformIpAllowlist } from '../middleware/auth.js';
 import { provisionCompany } from '../services/provisioning.js';
+import { logPlatformAction, listPlatformAuditLog } from '../services/platformAudit.js';
 
 const router = Router();
 
-router.use(requireAuth, requirePlatformAdmin);
+// Tighter than the general API — this whole router can create/suspend
+// companies and reset any company user's password, so it gets its own,
+// stricter budget regardless of what else is happening on the account.
+const platformLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60 });
+
+router.use(requireAuth, requirePlatformAdmin, requirePlatformIpAllowlist, platformLimiter);
 
 // GET /companies - list all subscribed companies
 router.get('/', async (req, res, next) => {
@@ -17,6 +24,16 @@ router.get('/', async (req, res, next) => {
        FROM companies ORDER BY created_at DESC`
     );
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /companies/platform-audit-log - every platform-admin action across
+// every company, newest first. The record of who did what, from here.
+router.get('/platform-audit-log', async (req, res, next) => {
+  try {
+    res.json(await listPlatformAuditLog());
   } catch (err) {
     next(err);
   }
@@ -55,6 +72,8 @@ router.post('/', async (req, res, next) => {
       `INSERT INTO directory (email, company_id) VALUES ($1, $2)`,
       [itAdminEmail, company.id]
     );
+
+    await logPlatformAction(req, 'company.create', company.id, { name, plan, itAdminEmail });
 
     res.status(201).json({ company, itAdminEmail });
   } catch (err) {
@@ -112,6 +131,8 @@ router.post('/:id/users', async (req, res, next) => {
       [email, companyId]
     );
 
+    await logPlatformAction(req, 'company.user.create', companyId, { email });
+
     res.status(201).json(rows[0]);
   } catch (err) {
     next(err);
@@ -131,6 +152,9 @@ router.patch('/:id/status', async (req, res, next) => {
       [status, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Company not found' });
+
+    await logPlatformAction(req, 'company.status', req.params.id, { status });
+
     res.json(rows[0]);
   } catch (err) {
     next(err);
@@ -147,6 +171,9 @@ router.patch('/:id/plan', async (req, res, next) => {
       [plan, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Company not found' });
+
+    await logPlatformAction(req, 'company.plan', req.params.id, { plan });
+
     res.json(rows[0]);
   } catch (err) {
     next(err);
@@ -200,6 +227,8 @@ router.post('/:id/users/:userId/reset-password', async (req, res, next) => {
       [passwordHash, req.params.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+    await logPlatformAction(req, 'company.user.reset_password', req.params.id, { userId: req.params.userId, email: rows[0].email });
 
     res.json({ ok: true, user: rows[0] });
   } catch (err) {

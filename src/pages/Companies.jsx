@@ -214,6 +214,53 @@ export default function Companies() {
           </button>
         </form>
       </div>
+
+      <PlatformAuditLogCard />
+    </div>
+  )
+}
+
+function PlatformAuditLogCard() {
+  const [log, setLog] = useState(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (open && log === null) {
+      api.getPlatformAuditLog().then(setLog).catch((err) => toast.error(err.message))
+    }
+  }, [open, log])
+
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Platform Audit Log</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Every platform-admin action across every company — create, suspend, plan change, password reset.</div>
+        </div>
+        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </div>
+      {open && (
+        log === null ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 14 }}>Loading…</div>
+        ) : log.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 14 }}>No actions logged yet.</div>
+        ) : (
+          <table className="data-table" style={{ marginTop: 14 }}>
+            <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th><th>IP</th></tr></thead>
+            <tbody>
+              {log.map((a) => (
+                <tr key={a.id}>
+                  <td style={{ fontSize: 12 }}>{new Date(a.createdAt).toLocaleString()}</td>
+                  <td style={{ fontSize: 12 }}>{a.adminEmail || '—'}</td>
+                  <td style={{ fontSize: 12 }}>{a.action}</td>
+                  <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>{a.details ? JSON.stringify(a.details) : '—'}</td>
+                  <td style={{ fontSize: 11, fontFamily: 'var(--font-mono)' }}>{a.ip}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      )}
     </div>
   )
 }

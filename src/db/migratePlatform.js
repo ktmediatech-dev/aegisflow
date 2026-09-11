@@ -29,10 +29,16 @@ async function main() {
     process.exit(0);
   }
 
-  const sql = fs.readFileSync(
-    path.join(__dirname, 'migrations/platform/001_init.sql'),
-    'utf-8'
-  );
+  // Every *.sql file in migrations/platform/, run in filename order — same
+  // pattern as the tenant migrations in provisioning.js, so a future
+  // platform-schema change just needs a new numbered file here.
+  const migrationsDir = path.join(__dirname, 'migrations/platform');
+  const sql = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+    .map((f) => fs.readFileSync(path.join(migrationsDir, f), 'utf-8'))
+    .join('\n');
   await client.query(sql);
   await client.end();
 

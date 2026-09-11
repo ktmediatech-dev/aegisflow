@@ -120,4 +120,5 @@ export default {
   resetCompanyUserPassword: (companyId, userId, newPassword) =>
     request(`/companies/${companyId}/users/${userId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) }),
   getCompanyAuditLog: (companyId) => request(`/companies/${companyId}/audit-log`),
+  getPlatformAuditLog: () => request('/companies/platform-audit-log'),
 }
