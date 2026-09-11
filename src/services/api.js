@@ -94,6 +94,9 @@ export default {
 
   getAnalyticsOverview: () => request('/analytics/overview'),
 
+  getSettings: () => request('/settings'),
+  updateSettings: (s) => request('/settings', { method: 'PATCH', body: JSON.stringify(s) }),
+
   getDeletionRequests: () => request('/deletion-requests'),
   approveDeletionRequest: (id) => request(`/deletion-requests/${id}/approve`, { method: 'PATCH' }),
   rejectDeletionRequest: (id) => request(`/deletion-requests/${id}/reject`, { method: 'PATCH' }),

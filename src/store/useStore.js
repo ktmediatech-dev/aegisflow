@@ -27,6 +27,7 @@ export const useStore = create((set, get) => ({
   suppliers: [],
   alerts: [],
   chartData: EMPTY_CHART_DATA,
+  settings: null,
   deletionRequests: [],
   tanks: [],
   nozzles: [],
@@ -123,6 +124,7 @@ export const useStore = create((set, get) => ({
       suppliers: [],
       alerts: [],
       chartData: EMPTY_CHART_DATA,
+      settings: null,
     }
 
     const canRead = (module) =>
@@ -144,6 +146,7 @@ export const useStore = create((set, get) => ({
       canRead('suppliers') ? api.getSuppliers() : Promise.resolve(null),
       canRead('dashboard') ? api.getAlerts() : Promise.resolve(null),
       canRead('analytics') ? api.getAnalyticsOverview() : Promise.resolve(null),
+      api.getSettings(), // every company user can read branding/theme
     ])
 
     const val = (i, fallback) => (results[i].status === 'fulfilled' && results[i].value ? results[i].value : fallback)
@@ -164,7 +167,14 @@ export const useStore = create((set, get) => ({
       suppliers: val(12, defaults.suppliers),
       alerts: val(13, defaults.alerts),
       chartData: val(14, defaults.chartData),
+      settings: val(15, defaults.settings),
     })
+  },
+
+  updateSettings: async (patch) => {
+    const updated = await api.updateSettings(patch)
+    set({ settings: updated })
+    return updated
   },
 
   // Company admin actions

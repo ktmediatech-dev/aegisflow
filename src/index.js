@@ -23,6 +23,7 @@ import alertsRoutes from './routes/alerts.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import nozzlesRoutes from './routes/nozzles.routes.js';
 import deletionRequestsRoutes from './routes/deletionRequests.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -65,6 +66,7 @@ api.use('/alerts', alertsRoutes);
 api.use('/analytics', analyticsRoutes);
 api.use('/nozzles', nozzlesRoutes);
 api.use('/deletion-requests', deletionRequestsRoutes);
+api.use('/settings', settingsRoutes);
 app.use('/api', api);
 
 // API error handler — must come right after the API routes so it only

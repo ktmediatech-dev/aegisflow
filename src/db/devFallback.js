@@ -219,6 +219,8 @@ function makeTenant(dbName) {
     audit_log: [],
     fleet_vehicle_compartments: [],
     compartment_readings: [],
+    tank_offload_readings: [],
+    company_settings: null,
   };
   tenants.set(dbName, t);
   return t;
@@ -816,6 +818,26 @@ function handleFleetOpsQuery(t, q, params) {
     d.resolved_by = resolvedBy;
     d.resolved_at = new Date().toISOString();
     return { rows: [serializeDeletionRequest(d)] };
+  }
+
+  // --- company_settings (singleton) ---
+  if (q.startsWith('select') && q.includes('from company_settings')) {
+    if (!t.company_settings) return { rows: [] };
+    const s = t.company_settings;
+    return { rows: [{ companyName: s.company_name, logoDataUri: s.logo_data_uri, contactEmail: s.contact_email, theme: s.theme, updatedAt: s.updated_at }] };
+  }
+  if (q.startsWith('insert into company_settings')) {
+    const [, companyName, logoDataUri, contactEmail, theme] = params; // params[0] is the fixed singleton id
+    const existing = t.company_settings || {};
+    t.company_settings = {
+      company_name: companyName ?? existing.company_name ?? null,
+      logo_data_uri: logoDataUri ?? existing.logo_data_uri ?? null,
+      contact_email: contactEmail ?? existing.contact_email ?? null,
+      theme: theme ?? existing.theme ?? 'dark',
+      updated_at: new Date().toISOString(),
+    };
+    const s = t.company_settings;
+    return { rows: [{ companyName: s.company_name, logoDataUri: s.logo_data_uri, contactEmail: s.contact_email, theme: s.theme, updatedAt: s.updated_at }] };
   }
 
   return undefined;

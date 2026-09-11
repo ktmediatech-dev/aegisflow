@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Fuel, Truck, Database, Wrench,
   HardHat, Package, BarChart3, Bell, ShieldAlert,
   Upload, FileText, ChevronLeft, ChevronRight, Zap,
-  Users, ShieldCheck, Briefcase, ClipboardList, Trash2
+  Users, ShieldCheck, Briefcase, ClipboardList, Trash2, Settings
 } from 'lucide-react'
 
 const NAV = [
@@ -24,6 +24,7 @@ const NAV = [
     { path: '/users', module: 'admin', icon: Users, label: 'Users' },
     { path: '/roles', module: 'admin', icon: ClipboardList, label: 'Roles' },
     { path: '/deletion-requests', module: 'admin', icon: Trash2, label: 'Deletion Requests' },
+    { path: '/settings', module: 'admin', icon: Settings, label: 'Org Settings' },
     { path: '/hr', module: 'hr', icon: Briefcase, label: 'HR' },
   ]},
   { label: 'Platform', items: [

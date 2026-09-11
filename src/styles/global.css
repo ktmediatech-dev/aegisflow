@@ -67,6 +67,68 @@
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
 }
 
+/* --- Named theme presets, selectable per-company under Settings --- */
+
+[data-theme="ocean"] {
+  --bg-base: #071a24; --bg-surface: #0c2530; --bg-raised: #12313d; --bg-overlay: #173c4a;
+  --border: rgba(148,213,255,0.08); --border-bright: rgba(148,213,255,0.16);
+  --text-primary: #e3f6ff; --text-secondary: #8fb9cc; --text-muted: #4a6b7a;
+  --accent: #22b8cf; --accent-dim: rgba(34,184,207,0.14); --accent-hover: #3fd0e6;
+  --success: #2dd4bf; --success-dim: rgba(45,212,191,0.12);
+  --warning: #f0b429; --warning-dim: rgba(240,180,41,0.12);
+  --danger: #ef4444; --danger-dim: rgba(239,68,68,0.12);
+  --info: #38bdf8; --info-dim: rgba(56,189,248,0.1);
+  --shadow: 0 2px 8px rgba(0,0,0,0.3); --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+[data-theme="forest"] {
+  --bg-base: #0f1a10; --bg-surface: #16241a; --bg-raised: #1c2e21; --bg-overlay: #233a29;
+  --border: rgba(180,255,190,0.07); --border-bright: rgba(180,255,190,0.14);
+  --text-primary: #e6f5e8; --text-secondary: #94b89a; --text-muted: #4f6754;
+  --accent: #4ade80; --accent-dim: rgba(74,222,128,0.12); --accent-hover: #6ee89f;
+  --success: #4ade80; --success-dim: rgba(74,222,128,0.12);
+  --warning: #eab308; --warning-dim: rgba(234,179,8,0.12);
+  --danger: #f87171; --danger-dim: rgba(248,113,113,0.12);
+  --info: #60a5fa; --info-dim: rgba(96,165,250,0.1);
+  --shadow: 0 2px 8px rgba(0,0,0,0.3); --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+[data-theme="sunset"] {
+  --bg-base: #1c1410; --bg-surface: #261b15; --bg-raised: #32241b; --bg-overlay: #3e2d21;
+  --border: rgba(255,200,150,0.08); --border-bright: rgba(255,200,150,0.16);
+  --text-primary: #fdf1e7; --text-secondary: #c9a48c; --text-muted: #7a5c48;
+  --accent: #fb923c; --accent-dim: rgba(251,146,60,0.14); --accent-hover: #fdab6b;
+  --success: #4ade80; --success-dim: rgba(74,222,128,0.12);
+  --warning: #fbbf24; --warning-dim: rgba(251,191,36,0.14);
+  --danger: #f87171; --danger-dim: rgba(248,113,113,0.12);
+  --info: #fb923c; --info-dim: rgba(251,146,60,0.1);
+  --shadow: 0 2px 8px rgba(0,0,0,0.3); --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+[data-theme="slate"] {
+  --bg-base: #eef1f5; --bg-surface: #ffffff; --bg-raised: #e4e8ee; --bg-overlay: #dbe0e8;
+  --border: rgba(30,41,59,0.09); --border-bright: rgba(30,41,59,0.16);
+  --text-primary: #1e293b; --text-secondary: #475569; --text-muted: #94a3b8;
+  --accent: #475569; --accent-dim: rgba(71,85,105,0.1); --accent-hover: #334155;
+  --success: #059669; --success-dim: rgba(5,150,105,0.1);
+  --warning: #d97706; --warning-dim: rgba(217,119,6,0.1);
+  --danger: #dc2626; --danger-dim: rgba(220,38,38,0.1);
+  --info: #475569; --info-dim: rgba(71,85,105,0.08);
+  --shadow: 0 2px 8px rgba(0,0,0,0.08); --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+[data-theme="violet"] {
+  --bg-base: #170f23; --bg-surface: #20162f; --bg-raised: #2b1f3d; --bg-overlay: #35284a;
+  --border: rgba(216,180,255,0.08); --border-bright: rgba(216,180,255,0.16);
+  --text-primary: #f2e9ff; --text-secondary: #b7a3cf; --text-muted: #6a5a80;
+  --accent: #a78bfa; --accent-dim: rgba(167,139,250,0.14); --accent-hover: #c0a8fd;
+  --success: #4ade80; --success-dim: rgba(74,222,128,0.12);
+  --warning: #fbbf24; --warning-dim: rgba(251,191,36,0.12);
+  --danger: #f87171; --danger-dim: rgba(248,113,113,0.12);
+  --info: #a78bfa; --info-dim: rgba(167,139,250,0.1);
+  --shadow: 0 2px 8px rgba(0,0,0,0.3); --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+
 html, body, #root {
   height: 100%;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

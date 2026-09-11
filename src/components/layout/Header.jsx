@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Menu, Bell, Search, ChevronRight, Moon, Sun } from 'lucide-react'
+import { Menu, Bell, Search, ChevronRight, Palette } from 'lucide-react'
 import { useStore } from '../../store/useStore.js'
-import { useTheme } from '../../context/ThemeContext.jsx'
+import { useTheme, THEMES } from '../../context/ThemeContext.jsx'
 import { CURRENCIES } from '../../utils/currency.js'
 
 const PAGE_TITLES = {
@@ -15,16 +15,19 @@ const PAGE_TITLES = {
   '/suppliers': 'Suppliers',
   '/analytics': 'Analytics',
   '/alerts': 'Alerts & Notifications',
-  '/fraud': 'Fraud Detection',
   '/import': 'Data Import',
   '/reports': 'Reports',
+  '/settings': 'Organization Settings',
 }
 
+const THEME_LABELS = { dark: 'Dark', light: 'Light', ocean: 'Ocean', forest: 'Forest', sunset: 'Sunset', slate: 'Slate', violet: 'Violet' }
+
 export default function Header() {
-  const { toggleSidebar, alerts, currency, setCurrency, user } = useStore()
-  const { theme, toggleTheme } = useTheme()
+  const { toggleSidebar, alerts, currency, setCurrency, user, settings } = useStore()
+  const { theme, setTheme } = useTheme()
   const location = useLocation()
   const [showNotif, setShowNotif] = useState(false)
+  const [showThemeMenu, setShowThemeMenu] = useState(false)
   const navigate = useNavigate()
   const activeAlerts = alerts.filter(a => a.status === 'active').slice(0, 4)
 
@@ -48,8 +51,11 @@ export default function Header() {
       </button>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {settings?.logoDataUri && (
+          <img src={settings.logoDataUri} alt="" style={{ height: 22, width: 22, objectFit: 'contain', borderRadius: 4 }} />
+        )}
         <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          {user?.type === 'platform_admin' ? 'Platform Admin' : user?.company || 'AegisFlow'}
+          {user?.type === 'platform_admin' ? 'Platform Admin' : (settings?.companyName || user?.company || 'AegisFlow')}
         </span>
         <ChevronRight size={12} color="var(--text-muted)" />
         <span style={{ fontWeight: 600, fontSize: 14 }}>{title}</span>
@@ -78,15 +84,37 @@ export default function Header() {
           ))}
         </select>
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="btn btn-ghost"
-          style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-        >
-          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
+        {/* Theme picker */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowThemeMenu(v => !v)}
+            className="btn btn-ghost"
+            style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title={`Theme: ${THEME_LABELS[theme]}`}
+          >
+            <Palette size={17} />
+          </button>
+          {showThemeMenu && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              width: 160, background: 'var(--bg-raised)',
+              border: '1px solid var(--border-bright)',
+              borderRadius: 12, boxShadow: 'var(--shadow-lg)',
+              zIndex: 100, overflow: 'hidden', padding: 6,
+            }}>
+              {THEMES.map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setTheme(t); setShowThemeMenu(false) }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ width: '100%', justifyContent: 'flex-start', fontWeight: t === theme ? 700 : 400, color: t === theme ? 'var(--accent)' : 'var(--text-primary)' }}
+                >
+                  {THEME_LABELS[t]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Notification bell */}
         <div style={{ position: 'relative' }}>
@@ -136,6 +164,9 @@ export default function Header() {
 
       {showNotif && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowNotif(false)} />
+      )}
+      {showThemeMenu && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowThemeMenu(false)} />
       )}
     </header>
   )

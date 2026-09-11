@@ -18,6 +18,7 @@ import Companies from './pages/Companies.jsx'
 import Users from './pages/Users.jsx'
 import Roles from './pages/Roles.jsx'
 import DeletionRequests from './pages/DeletionRequests.jsx'
+import OrgSettings from './pages/OrgSettings.jsx'
 import HR from './pages/HR.jsx'
 import Finance from './pages/Finance.jsx'
 import Procurement from './pages/Procurement.jsx'
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="users" element={<ProtectedRoute moduleKey="admin"><Users /></ProtectedRoute>} />
           <Route path="roles" element={<ProtectedRoute moduleKey="admin"><Roles /></ProtectedRoute>} />
           <Route path="deletion-requests" element={<ProtectedRoute moduleKey="admin"><DeletionRequests /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute moduleKey="admin"><OrgSettings /></ProtectedRoute>} />
           <Route path="hr" element={<ProtectedRoute moduleKey="hr"><HR /></ProtectedRoute>} />
           <Route path="finance" element={<ProtectedRoute moduleKey="finance"><Finance /></ProtectedRoute>} />
           <Route path="procurement" element={<ProtectedRoute moduleKey="procurement"><Procurement /></ProtectedRoute>} />
