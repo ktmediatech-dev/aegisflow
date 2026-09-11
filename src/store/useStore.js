@@ -290,4 +290,28 @@ export const useStore = create((set, get) => ({
     set((s) => ({ nozzleReadings: [created, ...s.nozzleReadings] }))
     return created
   },
+
+  // Fleet vehicle compartments
+  fetchVehicleCompartments: async (vehicleId) => api.getVehicleCompartments(vehicleId),
+  saveVehicleCompartments: async (vehicleId, compartments) => api.createVehicleCompartments(vehicleId, compartments),
+
+  // Trips (depot-to-station delivery runs) and the offload workflow
+  addTransitLog: async (trip) => {
+    const created = await api.createTransitLog(trip)
+    set((s) => ({ transitLogs: [created, ...s.transitLogs] }))
+    return created
+  },
+  arriveTransitLog: async (id) => {
+    const updated = await api.arriveTransitLog(id)
+    set((s) => ({ transitLogs: s.transitLogs.map((t) => (t.id === id ? updated : t)) }))
+    return updated
+  },
+  fetchCompartmentReadings: async (transitLogId) => api.getCompartmentReadings(transitLogId),
+  saveCompartmentReadings: async (transitLogId, stage, readings) => {
+    const result = await api.saveCompartmentReadings(transitLogId, stage, readings)
+    set((s) => ({ transitLogs: s.transitLogs.map((t) => (t.id === transitLogId ? result.trip : t)) }))
+    return result
+  },
+  saveTankOpeningDip: async (transitLogId, data) => api.saveTankOpeningDip(transitLogId, data),
+  fetchTankOffloadSummary: async (transitLogId) => api.getTankOffloadSummary(transitLogId),
 }))

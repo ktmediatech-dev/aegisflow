@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore.js'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { AlertTriangle, TrendingDown, CheckCircle, Search, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import TripManagerModal from '../components/TripManagerModal.jsx'
 
 const TANK_STATUS = {
   normal: { label: 'Normal', cls: 'badge-success', color: 'var(--success)' },
@@ -13,22 +14,44 @@ const TANK_STATUS = {
 
 export default function Tanks() {
   const {
-    tankReadings, transitLogs, chartData, stations,
-    nozzles, nozzleReadings, nozzleReconciliation, fetchNozzleData, addNozzle, addNozzleReading,
+    tankReadings, transitLogs, chartData, stations, fleet,
+    nozzles, nozzleReadings, nozzleReconciliation, fetchNozzleData, addNozzle, addNozzleReading, addTransitLog,
   } = useStore()
   const [tab, setTab] = useState('readings')
   const [search, setSearch] = useState('')
   const [nozzleDataLoaded, setNozzleDataLoaded] = useState(false)
   const [showNozzleModal, setShowNozzleModal] = useState(false)
   const [showReadingModal, setShowReadingModal] = useState(false)
+  const [showTripModal, setShowTripModal] = useState(false)
+  const [managingTripId, setManagingTripId] = useState(null)
+  const managingTrip = transitLogs.find((t) => t.id === managingTripId) || null
   const [nozzleForm, setNozzleForm] = useState({ stationId: '', tankNo: '', product: 'PMS', capacity: 20000, label: '' })
   const [readingForm, setReadingForm] = useState({ nozzleId: '', readingDate: new Date().toISOString().slice(0, 10), openingMeter: '', closingMeter: '' })
+  const [tripForm, setTripForm] = useState({ vehicleId: '', route: '', product: 'PMS', driver: '' })
 
+  // Tanks (master list, needed by trip management) load alongside nozzle
+  // data regardless of which tab is active first.
   useEffect(() => {
-    if (tab === 'nozzles' && !nozzleDataLoaded) {
+    if ((tab === 'nozzles' || tab === 'transit') && !nozzleDataLoaded) {
       fetchNozzleData().then(() => setNozzleDataLoaded(true)).catch(() => {})
     }
   }, [tab, nozzleDataLoaded, fetchNozzleData])
+
+  const handleCreateTrip = async () => {
+    if (!tripForm.vehicleId || !tripForm.route) {
+      toast.error('Vehicle and route are required')
+      return
+    }
+    try {
+      const created = await addTransitLog(tripForm)
+      toast.success('Trip created')
+      setShowTripModal(false)
+      setTripForm({ vehicleId: '', route: '', product: 'PMS', driver: '' })
+      setManagingTripId(created.id)
+    } catch (err) {
+      toast.error(err.message || 'Failed to create trip')
+    }
+  }
 
   const handleAddNozzle = async () => {
     if (!nozzleForm.stationId || !nozzleForm.tankNo || !nozzleForm.label) {
@@ -161,38 +184,79 @@ export default function Tanks() {
       )}
 
       {tab === 'transit' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="data-table">
-            <thead>
-              <tr><th>Vehicle</th><th>Route</th><th>Product</th><th>Loaded (L)</th><th>Delivered (L)</th><th>Loss (L)</th><th>Loss %</th><th>Driver</th><th>Status</th><th>Flagged</th></tr>
-            </thead>
-            <tbody>
-              {transitLogs.map(t => (
-                <tr key={t.id} style={{ background: t.flagged ? 'rgba(239,68,68,0.04)' : '' }}>
-                  <td>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{t.plate}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.depDate} → {t.arrDate}</div>
-                  </td>
-                  <td style={{ fontSize: 12 }}>{t.route}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--info)' }}>{t.product}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>{t.loadedQty.toLocaleString()}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>{t.deliveredQty.toLocaleString()}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', color: t.transitLoss > 500 ? 'var(--danger)' : 'var(--warning)' }}>-{t.transitLoss}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', color: t.lossPct > 1 ? 'var(--danger)' : t.lossPct > 0.5 ? 'var(--warning)' : 'var(--success)' }}>{t.lossPct.toFixed(2)}%</td>
-                  <td>{t.driver}</td>
-                  <td>
-                    <span className={`badge ${t.status === 'completed' ? 'badge-muted' : t.status === 'investigating' ? 'badge-warning' : 'badge-info'}`}>{t.status}</span>
-                  </td>
-                  <td>
-                    {t.flagged
-                      ? <span className="badge badge-danger"><AlertTriangle size={10} />Flagged</span>
-                      : <span className="badge badge-success"><CheckCircle size={10} />Clear</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowTripModal(true)}><Plus size={13} /> New Trip</button>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table className="data-table">
+              <thead>
+                <tr><th>Vehicle</th><th>Route</th><th>Product</th><th>Loaded (L)</th><th>Delivered (L)</th><th>Loss (L)</th><th>Loss %</th><th>Driver</th><th>Status</th><th>Flagged</th><th></th></tr>
+              </thead>
+              <tbody>
+                {transitLogs.map(t => (
+                  <tr key={t.id} style={{ background: t.flagged ? 'rgba(239,68,68,0.04)' : '' }}>
+                    <td>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{t.plate}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.depDate?.slice(0,10)} → {t.arrDate?.slice(0,10) || '—'}</div>
+                    </td>
+                    <td style={{ fontSize: 12 }}>{t.route}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--info)' }}>{t.product}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(t.loadedQty).toLocaleString()}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(t.deliveredQty).toLocaleString()}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: Number(t.transitLoss) > 500 ? 'var(--danger)' : 'var(--warning)' }}>-{Number(t.transitLoss).toLocaleString()}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: Number(t.lossPct) > 1 ? 'var(--danger)' : Number(t.lossPct) > 0.5 ? 'var(--warning)' : 'var(--success)' }}>{Number(t.lossPct).toFixed(2)}%</td>
+                    <td>{t.driver}</td>
+                    <td>
+                      <span className={`badge ${t.status === 'completed' ? 'badge-muted' : t.status === 'investigating' ? 'badge-warning' : 'badge-info'}`}>{t.status}</span>
+                    </td>
+                    <td>
+                      {t.flagged
+                        ? <span className="badge badge-danger"><AlertTriangle size={10} />Flagged</span>
+                        : <span className="badge badge-success"><CheckCircle size={10} />Clear</span>}
+                    </td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setManagingTripId(t.id)}>Manage</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {showTripModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowTripModal(false)}>
+          <div className="modal">
+            <div className="modal-title">New Trip<button className="btn btn-ghost btn-sm" onClick={() => setShowTripModal(false)}>✕</button></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Vehicle</label>
+                <select value={tripForm.vehicleId} onChange={e => setTripForm(p => ({...p, vehicleId: e.target.value}))}>
+                  <option value="">Select vehicle…</option>
+                  {fleet.filter(v => v.type === 'Tanker').map(v => <option key={v.id} value={v.id}>{v.plate} ({v.ownership})</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">Route</label><input value={tripForm.route} onChange={e => setTripForm(p => ({...p, route: e.target.value}))} placeholder="e.g. Depot → Nairobi Central" /></div>
+              <div className="form-group">
+                <label className="form-label">Product</label>
+                <select value={tripForm.product} onChange={e => setTripForm(p => ({...p, product: e.target.value}))}>
+                  {['PMS','AGO','DPK','LPG','BIK'].map(p => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label className="form-label">Driver</label><input value={tripForm.driver} onChange={e => setTripForm(p => ({...p, driver: e.target.value}))} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="btn btn-secondary" onClick={() => setShowTripModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleCreateTrip}>Create Trip</button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {managingTrip && (
+        <TripManagerModal trip={managingTrip} onClose={() => setManagingTripId(null)} />
       )}
 
       {tab === 'variance' && (

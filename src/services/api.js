@@ -59,9 +59,20 @@ export default {
   createFleetVehicle: (v) => request('/fleet', { method: 'POST', body: JSON.stringify(v) }),
   updateFleetVehicle: (id, v) => request(`/fleet/${id}`, { method: 'PATCH', body: JSON.stringify(v) }),
   deleteFleetVehicle: (id, reason) => request(`/fleet/${id}`, { method: 'DELETE', body: JSON.stringify({ reason }) }),
+  getVehicleCompartments: (vehicleId) => request(`/fleet/${vehicleId}/compartments`),
+  createVehicleCompartments: (vehicleId, compartments) =>
+    request(`/fleet/${vehicleId}/compartments`, { method: 'POST', body: JSON.stringify({ compartments }) }),
 
   getTankReadings: () => request('/tanks/readings'),
   getTransitLogs: () => request('/tanks/transit-logs'),
+  createTransitLog: (t) => request('/tanks/transit-logs', { method: 'POST', body: JSON.stringify(t) }),
+  arriveTransitLog: (id) => request(`/tanks/transit-logs/${id}/arrive`, { method: 'PATCH' }),
+  getCompartmentReadings: (transitLogId) => request(`/tanks/transit-logs/${transitLogId}/compartment-readings`),
+  saveCompartmentReadings: (transitLogId, stage, readings) =>
+    request(`/tanks/transit-logs/${transitLogId}/compartment-readings`, { method: 'POST', body: JSON.stringify({ stage, readings }) }),
+  saveTankOpeningDip: (transitLogId, data) =>
+    request(`/tanks/transit-logs/${transitLogId}/tank-opening-dip`, { method: 'POST', body: JSON.stringify(data) }),
+  getTankOffloadSummary: (transitLogId) => request(`/tanks/transit-logs/${transitLogId}/tank-offload-summary`),
 
   getMaintenanceJobs: () => request('/maintenance'),
   createMaintenanceJob: (j) => request('/maintenance', { method: 'POST', body: JSON.stringify(j) }),
