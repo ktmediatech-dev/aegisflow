@@ -40,7 +40,7 @@ router.post('/', requirePermission('dashboard', 'write'), async (req, res, next)
   }
 })
 
-router.patch('/:id/acknowledge', requirePermission('dashboard', 'write'), async (req, res, next) => {
+router.patch('/:id/acknowledge', requirePermission('dashboard', 'read'), async (req, res, next) => {
   try {
     const pool = getTenantPool(req.auth.dbName)
     const { rows } = await pool.query(
@@ -54,7 +54,7 @@ router.patch('/:id/acknowledge', requirePermission('dashboard', 'write'), async 
   }
 })
 
-router.patch('/:id/dismiss', requirePermission('dashboard', 'write'), async (req, res, next) => {
+router.patch('/:id/dismiss', requirePermission('dashboard', 'read'), async (req, res, next) => {
   try {
     const pool = getTenantPool(req.auth.dbName)
     const { rows } = await pool.query(

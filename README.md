@@ -134,6 +134,84 @@ because the connection pool's session is scoped to exactly one schema.
 Chronological record of what's been built, so context isn't lost between
 sessions. Newest entries at the top.
 
+### 2026-09-11 — PetroNet demo data import; alert-ack bug; auto risk scores; loss & truck statements
+
+- **Imported `PetroNet_Corp_Dummy_Data.xlsx` into the real KT-Petroleum
+  company** via a new one-off script, `scripts/import_xlsx_data.js`
+  (usage: `node scripts/import_xlsx_data.js <path> <schema_name>`).
+  Validated against a throwaway test company first (cleaned up
+  afterwards — schema dropped, company/directory rows removed), then run
+  for real against `co_kt_petroleum_mtwo5eb0`: 8 stations, 8 fleet
+  vehicles, 12 tank readings, 6 maintenance jobs, 5 transit logs, 5
+  contractors, 4 suppliers, 5 alerts, 6 HR employees, 5 invoices, 4
+  procurement orders, 4 compliance cases — all foreign keys (station/
+  vehicle lookups by name/plate) resolved correctly. Two figures in the
+  import are estimates, not real operational data, flagged in the
+  script's own comments: tank **capacity** (not in the source format,
+  estimated as `currentLevel / 0.6`) and tank **opening/closing
+  stock/sales volume** (set to match current level / zero, since the
+  format has no daily reconciliation). The xlsx itself is gitignored
+  (tenant-specific data, not app code) — only the importer script is
+  committed.
+
+- **Fixed "failed to acknowledge alert."** Root cause: `PATCH
+  /alerts/:id/acknowledge` and `/dismiss` were gated on `dashboard.write`,
+  but only the "IT Admin" role has write access to that module — every
+  other role (Station Manager, Fleet Manager, Managing Director, etc.)
+  only has `dashboard.read`, so every non-IT-Admin user got a silent 403.
+  Loosened both routes to `dashboard.read` — anyone who can see an alert
+  can act on it; acknowledging/dismissing isn't a destructive write to
+  dashboard configuration. Verified against production with a
+  diagnostically-minted JWT (same claims a real login would produce):
+  the endpoint now returns 200 and flips `status` correctly.
+
+  **Also found and fixed a second, unrelated bug while chasing this**:
+  `express.static` was auto-serving `index.html` for `/` using its own
+  default `Cache-Control` header *before* the app's own catch-all route
+  handler (which explicitly sets `no-cache`) ever ran — so a browser or
+  intermediate proxy could serve a stale `index.html` referencing a
+  previous deploy's hashed JS bundle after a redeploy, even though the
+  backend fix was already live. Fixed by passing `{ index: false }` to
+  `express.static` so the explicit handler is what actually serves `/`.
+  This is a real, general "stale frontend after deploy" risk independent
+  of the alert bug — worth remembering if something ever again looks
+  fixed on the server but not in the browser.
+
+- **Station risk score is now auto-computed, not a static column.**
+  `GET/POST/PATCH /stations` compute it live from four signals, capped at
+  100: worst current tank variance status at that station (0-35pts:
+  anomaly=35, critical=25, warning=12), recent (90-day) transit loss %
+  and flagged-trip count *attributed to the station via its offload
+  readings* (0-30pts — legacy/imported trips with no offload-readings
+  row can't be attributed to a specific station this way and won't
+  contribute here), overdue maintenance jobs matched by station name
+  (0-15pts), and open alerts by severity (0-20pts). Verified against
+  KT-Petroleum's real data — scores now spread meaningfully (0-54)
+  instead of sitting at a flat imported/default value.
+
+- **Tank/transit losses now shown as a period statement, not an
+  all-time running total.** The Tanks page's old "Total Daily Variance"
+  stat summed `variance` across *every* reading ever taken — never
+  reset, mislabeled "Daily." Replaced with a Source (Station tank
+  losses / Transporter losses / Combined) + date-range picker, defaulting
+  to the current calendar month. Deliberately **not** a stored, resettable
+  counter — every view is a fresh `SUM(...) WHERE date BETWEEN start AND
+  end` over the existing `tank_readings`/`transit_logs` rows. That gives
+  "restarts at zero each month" for free with no cron/reset job to get
+  wrong, and a custom range spanning several months also starts fresh
+  from its own start date — no carryover from any prior period, and
+  nothing is ever deleted, so full history stays queryable.
+
+- **New "Truck Statement" report** (Reports page): pick one vehicle by
+  plate and a date range, see every trip it ran in that period across
+  every station/route it touched — loaded/delivered/loss/loss%/flagged
+  per trip, plus summary stats (trip count, total loaded/delivered,
+  total loss, avg loss%, routes covered, flagged count). CSV export and
+  print work the same as the other report types. Filters directly on
+  `transit_logs.plate`, so it covers every trip regardless of whether
+  that trip went through the full offload workflow (unlike the
+  station-attributed risk-score transit component above).
+
 ### 2026-09-11 — The two remaining hardening items, closed out
 
 **Per-tenant Postgres roles: investigated, not achievable on this

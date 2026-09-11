@@ -92,9 +92,27 @@ export default function Tanks() {
     return t.stationName.toLowerCase().includes(q) || t.product.toLowerCase().includes(q) || t.tankNo.toLowerCase().includes(q)
   })
 
-  const totalVarianceLoss = tankReadings.reduce((s, t) => s + Math.abs(t.variance), 0)
   const anomalyTanks = tankReadings.filter(t => t.variancePct > 0.5).length
   const criticalTanks = tankReadings.filter(t => t.status === 'critical').length
+
+  // Loss statement: always a fresh sum over [start, end] rather than a
+  // stored running counter, so "this month" naturally starts at zero on
+  // the 1st (nothing to reset) and a custom multi-month range naturally
+  // starts from zero at its own start date — no carryover state anywhere.
+  const monthStart = new Date(); monthStart.setDate(1)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [lossSource, setLossSource] = useState('combined') // 'station' | 'transit' | 'combined'
+  const [lossRange, setLossRange] = useState({ start: monthStart.toISOString().slice(0, 10), end: todayStr })
+
+  const stationLoss = tankReadings
+    .filter(t => t.date >= lossRange.start && t.date <= lossRange.end)
+    .reduce((s, t) => s + Math.abs(Number(t.variance) || 0), 0)
+  const transitLoss = transitLogs
+    .filter(t => t.arrDate && t.arrDate >= lossRange.start && t.arrDate <= lossRange.end)
+    .reduce((s, t) => s + (Number(t.transitLoss) || 0), 0)
+  const totalVarianceLoss = lossSource === 'station' ? stationLoss : lossSource === 'transit' ? transitLoss : stationLoss + transitLoss
+  const isThisMonth = lossRange.start === monthStart.toISOString().slice(0, 10) && lossRange.end === todayStr
+  const resetToThisMonth = () => setLossRange({ start: monthStart.toISOString().slice(0, 10), end: todayStr })
 
   return (
     <div className="animate-fadeIn">
@@ -117,12 +135,41 @@ export default function Tanks() {
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>&gt;0.5% threshold</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Total Daily Variance</div>
-          <div className="stat-value">{totalVarianceLoss.toLocaleString()} L</div>
-        </div>
-        <div className="stat-card">
           <div className="stat-label">Critical Low Tanks</div>
           <div className="stat-value" style={{ color: criticalTanks > 0 ? 'var(--danger)' : 'var(--success)' }}>{criticalTanks}</div>
+        </div>
+      </div>
+
+      {/* Loss statement: source + period selection. Defaults to the
+          current calendar month (nothing carries over from prior months);
+          pick a custom range to run a statement for that period instead. */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
+          <div>
+            <div className="stat-label">Losses {isThisMonth ? '(This Month)' : `(${lossRange.start} → ${lossRange.end})`}</div>
+            <div className="stat-value" style={{ color: totalVarianceLoss > 0 ? 'var(--danger)' : 'var(--success)' }}>
+              {totalVarianceLoss.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
+            </div>
+          </div>
+          <div>
+            <div className="form-label">Source</div>
+            <select className="form-select" value={lossSource} onChange={(e) => setLossSource(e.target.value)} style={{ width: 'auto' }}>
+              <option value="combined">Combined</option>
+              <option value="station">Station tank losses</option>
+              <option value="transit">Transporter losses</option>
+            </select>
+          </div>
+          <div>
+            <div className="form-label">From</div>
+            <input type="date" className="form-input" value={lossRange.start} onChange={(e) => setLossRange(r => ({ ...r, start: e.target.value }))} />
+          </div>
+          <div>
+            <div className="form-label">To</div>
+            <input type="date" className="form-input" value={lossRange.end} onChange={(e) => setLossRange(r => ({ ...r, end: e.target.value }))} />
+          </div>
+          {!isThisMonth && (
+            <button className="btn btn-secondary btn-sm" onClick={resetToThisMonth}>This Month</button>
+          )}
         </div>
       </div>
 

@@ -88,9 +88,19 @@ app.use('/api', (err, req, res, next) => {
 // doesn't exist yet (e.g. `npm run server` during frontend-only dev via
 // `npm run client` on a separate Vite port) — those routes just 404.
 const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
+// { index: false } — otherwise express.static auto-serves index.html for
+// "/" with its own default Cache-Control before the explicit no-cache
+// handler below ever runs.
+app.use(express.static(distPath, { index: false }));
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
+  // index.html itself must never be cached — its hashed asset references
+  // change on every deploy, and a stale cached copy (browser or an
+  // intermediate proxy) would keep loading last deploy's JS bundle while
+  // silently still hitting the current (fixed) backend, which is
+  // confusing to debug. The hashed files under /assets are safe to cache
+  // hard since a new deploy always gets new filenames.
+  res.set('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
     if (err) next();
   });
