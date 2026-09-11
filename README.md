@@ -128,6 +128,88 @@ because the connection pool's session is scoped to exactly one schema.
 Chronological record of what's been built, so context isn't lost between
 sessions. Newest entries at the top.
 
+### 2026-09-11 — Git, truck compartments/offload UI, org settings & themes
+
+**GitHub**: initial commit made locally, then pushed to
+`git@github.com:ktmediatech-dev/aegisflow.git` once the `Kasuleronald`
+account was added as a collaborator and accepted the invite. All work
+from this point on is committed and pushed there — check it first for
+the latest state rather than assuming the deployed server always has it
+(the server gets updated by direct file upload during a session, same
+as always; git isn't wired into the deploy path itself yet — see "Still
+open" below).
+
+**Truck compartments + depot-to-station offload — frontend, and the full
+arrival/tank-assignment extension to the backend.** Building on the
+compartment/dip-reading backend from earlier: Fleet page now has
+owned/hired vehicle fields and a per-vehicle compartment registration
+modal; Tanks page has trip creation and a `TripManagerModal` that walks
+a trip through loading → in-transit → arrived → completed, matching
+what the UI actually lets you do at each stage. Extended the backend
+(and the trip lifecycle) further per a detailed workflow spec: departure
+time is captured automatically when loading dips are submitted; arrival
+must be explicitly recorded by the station manager (a separate step,
+gates delivery dipping — verified this rejects delivery entry before
+arrival); receiving tanks get an opening dip captured before offload;
+each compartment is assigned to exactly one tank (confirmed: no
+splitting a compartment across tanks) and the product must match — PMS
+only into a PMS tank, AGO only into AGO, BIK only into BIK, verified via
+a real rejected mismatch; the system computes an expected closing volume
+per tank (opening + delivered − any pump sales on that tank during the
+offload window, sourced from the existing nozzle_readings mechanism)
+for later comparison against that tank's next physical dip. All of this
+was tested against real Postgres end-to-end (create trip → load → block
+premature delivery → arrive → capture opening dip → reject
+product-mismatch → deliver correctly → verify expected-closing math),
+not just written and assumed correct.
+*Known gap:* this specific feature (schema 006, the arrival/offload
+extension) was not backfilled into `devFallback.js` — it only works
+against real Postgres. Everything through schema 005 (compartments,
+basic trip loading/delivery) does have fallback support.
+
+**Organization Settings**: new self-service page (IT Admin only) for a
+company's own branding — logo (small image, stored inline as a data
+URI; there's no file-storage service configured, so keep logos under
+~350KB), display name, and contact email. The logo + name now render in
+the header for everyone in that company. Also replaced the old binary
+dark/light toggle with **7 selectable theme presets** (dark, light,
+ocean, forest, sunset, slate, violet) — the IT Admin sets the company's
+default, but it only takes effect for browsers that have never had a
+user explicitly pick their own theme (tracked separately), so it never
+silently overrides someone's personal choice.
+
+**Also fixed while in the area:**
+- `api.js`'s error handler had a real bug: `throw new Error(...)` inside
+  a `try` block was being caught by its own adjacent `catch`, discarding
+  the backend's actual error message (e.g. "This company account is not
+  active") in favor of a generic HTTP status text ("Unauthorized" for
+  everything). This is why a real 401 was showing as "Unable to sign in"
+  instead of the specific reason — fixed, and specific reasons now
+  surface correctly (verified: suspended-company and disabled-user cases
+  already had specific backend messages, they just weren't reaching the UI).
+- `express-rate-limit` was warning on every request behind Webuzo's
+  reverse proxy (`X-Forwarded-For` present but Express `trust proxy` not
+  set) — added `app.set('trust proxy', 1)`.
+- Plans simplified to just `trial` and `enterprise` per direction — the
+  `starter`/`growth` options were placeholders with no different
+  behavior behind them anyway (see the "plans have no functional
+  difference yet" note below, still true).
+
+**Still open / worth knowing:**
+- **Plan tiers still don't do anything.** `trial` vs `enterprise` is a
+  label on the company record — nothing gates a feature, limits usage,
+  or drives billing based on it. If that needs to become real, that's a
+  distinct feature (module limits per tier, user/station caps, or a
+  billing provider integration) — flag when ready.
+- **Git and the live deploy are two separate, manually-synced things.**
+  A `git push` does not touch `aegisflow.scholarsas.com` — deploying
+  still means re-running the tar/scp steps documented lower in this log.
+  Worth setting up a proper deploy hook (e.g. a GitHub Action that SSHes
+  in and pulls) if deploys are going to keep happening this often.
+- SSH to `nexus.crystalcloudhost.com` continues to be intermittently
+  flaky (random mid-command disconnects) — a recurring nuisance, not a
+  sign of misconfiguration; just retry.
+
 ### 2026-09-11 — Platform admin/tenant separation, deployment bug fixes
 
 **Platform admin was seeing (empty) tenant UI — fixed.** Login granted
