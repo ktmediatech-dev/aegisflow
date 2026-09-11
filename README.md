@@ -113,12 +113,18 @@ because the connection pool's session is scoped to exactly one schema.
 - Schema-level isolation relies entirely on every query going through
   `getTenantPool()`'s session-pinned `search_path` and never explicitly
   qualifying a table with another schema's name — audit any new raw SQL
-  for that. A leaked `PG_APP_USER` credential can reach every company's
-  schema (same tradeoff database-per-tenant would have had with a shared
-  admin credential; a compromised app-level credential was never
-  contained by either design).
-- Put the admin-only `/companies` routes behind an extra layer (IP
-  allowlist, 2FA) since they can create/suspend any company.
+  for that.
+- A leaked `PG_APP_USER` credential can reach every company's schema.
+  Investigated per-tenant Postgres roles as a fix — not possible on the
+  current hosting tier (`scholars_kasule` has no `CREATEROLE`); would
+  need either an elevated grant from the host or different hosting. Not
+  urgent for a single-pilot-customer stage; revisit before onboarding
+  unrelated companies. `.env` is at least `chmod 600` on the server.
+- `/companies` (create/suspend/plan-change/password-reset on any
+  company) now has: a dedicated rate limiter, an optional
+  `PLATFORM_ADMIN_IP_ALLOWLIST`, a full audit log
+  (`platform_audit_log`), and optional TOTP 2FA (`/auth/2fa/*`, enroll
+  from the Security page) — all built, see Development Log below.
 - Rotate `JWT_SECRET` and keep `.env` out of version control.
 
 ---
@@ -127,6 +133,51 @@ because the connection pool's session is scoped to exactly one schema.
 
 Chronological record of what's been built, so context isn't lost between
 sessions. Newest entries at the top.
+
+### 2026-09-11 — The two remaining hardening items, closed out
+
+**Per-tenant Postgres roles: investigated, not achievable on this
+hosting tier — do not attempt again without new hosting.** Checked
+directly: `scholars_kasule` has `rolcreaterole = false`, same as the
+`rolcreatedb = false` finding from the original database-per-company
+pivot. There is no way for the app's own connection to create
+per-company Postgres roles here, and no privilege escalation path from
+inside the app. The only real fixes are (a) ask crystalcloudhost for a
+`CREATEROLE` grant on this account, or (b) move to hosting with full
+Postgres admin control. Applied the one mitigation that *is* available
+at this tier: `chmod 600` on the server's `.env` (was readable, now
+owner-only), so a credential leak requires OS-level account compromise,
+not just a misconfigured file permission. The "one leaked credential
+reaches every tenant schema" risk stands as documented — it's a
+property of this hosting tier, not an oversight.
+
+**Full TOTP 2FA for platform admin — built.** `/auth/2fa/setup` (secret
++ QR code) → `/auth/2fa/verify-setup` (confirms with a live code, turns
+2FA on, issues 8 one-time backup codes shown exactly once) →
+`/auth/2fa/login-verify` (the actual second login step). A 2FA-enabled
+admin's password-only login now returns a short-lived `pendingToken`
+instead of a session; the real token only comes from a live
+authenticator code or an unused backup code. New Security page for
+enrollment/disable. Company user login is entirely unaffected — this
+only applies to the platform admin. Rate-limited separately (15/15min)
+from general login.
+*Caught during build, not after:* `otplib`'s latest major (v13) turned
+out to be a ground-up API rewrite — no `authenticator` export at all,
+nothing matching any documentation example found. Pinned to v12
+instead, which has the classic `authenticator.generateSecret() /
+.keyuri() / .check()` API this code actually uses.
+*Verified, not assumed:* full lifecycle tested locally against the dev
+fallback with real generated codes — enrollment, wrong-code rejection,
+correct-code login, backup-code login with one-time consumption
+confirmed (reuse correctly rejected), status check, disable, and
+password-only login working again after disable. Then confirmed the
+new routes and `platform_admins` schema changes are live on production
+*without* touching the real admin account's current login (2FA stays
+off until you deliberately visit Security and enroll).
+
+Both items from the external review are now either fixed or explicitly
+documented as not fixable here, with why. Nothing from that review is
+still an open unknown.
 
 ### 2026-09-11 — Platform-admin hardening (external review follow-up)
 
