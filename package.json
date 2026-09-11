@@ -15,7 +15,6 @@
     "migrate:platform": "node src/db/migratePlatform.js",
     "migrate:tenants": "node src/db/migrateTenants.js",
     "seed:admin": "node src/db/seedPlatformAdmin.js",
-    "autosync": "git add . && git commit -m 'autosync' && git push",
     "deploy": "npm run build && npm run migrate:platform"
   },
 

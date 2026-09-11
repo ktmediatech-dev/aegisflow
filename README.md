@@ -128,6 +128,42 @@ because the connection pool's session is scoped to exactly one schema.
 Chronological record of what's been built, so context isn't lost between
 sessions. Newest entries at the top.
 
+### 2026-09-11 — Platform-admin hardening (external review follow-up)
+
+An external code review flagged four things. Three were still valid,
+one was stale — worth recording which was which:
+
+1. **`autosync` script risk** — checked first rather than assumed: the
+   full git history (5 commits, this session only) has no leaked
+   secrets; `.env` was excluded from commit 1. Still removed the
+   `npm run autosync` one-liner (`git add . && commit && push`, risky
+   to ever run unattended) and deleted `scripts/autosync.js` — a
+   separate, already-dead watcher script that targeted a `main` branch
+   this repo doesn't have (it's `master`), so it would've failed if
+   anyone tried it.
+2. **Admin route protection** — real gap, now addressed: `/companies`
+   (create/suspend/plan-change/password-reset on *any* company) had
+   nothing beyond "has a valid JWT". Added a stricter rate limiter
+   scoped to just this router, an optional IP allowlist
+   (`PLATFORM_ADMIN_IP_ALLOWLIST` — off by default), and a new
+   platform-wide audit log (`platform_audit_log` table, surfaced in the
+   Companies page) recording who did what to which company and from
+   what IP. Verified against real Postgres — a plan change correctly
+   logged with the real client IP through Webuzo's proxy, confirming
+   `trust proxy` resolves it accurately (so the allowlist will too, once
+   enabled). Full TOTP 2FA was deliberately deferred — it's a bigger,
+   separate change (adds a second login step to the platform-admin flow)
+   rather than a drop-in hardening measure; flag if you want it built.
+3. **Shared `PG_APP_USER` across all tenant schemas** — still an open
+   gap, not addressed this pass. One leaked credential currently reaches
+   every company's schema. Not urgent for a single-pilot-customer stage;
+   revisit (per-tenant DB roles, or Postgres row-level security as
+   defense-in-depth) before onboarding unrelated companies.
+4. **"Untested against real Postgres"** — this was stale by the time
+   the review reached me; every feature since the schema-per-company
+   migration earlier today has been built and verified against the live
+   `scholars_aegisflow` database, not just the dev fallback.
+
 ### 2026-09-11 — Git, truck compartments/offload UI, org settings & themes
 
 **GitHub**: initial commit made locally, then pushed to
